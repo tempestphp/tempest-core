@@ -1,5 +1,7 @@
 <?php
 
-use Tempest\Http\Static\StaticRouteConfig;
+declare(strict_types=1);
 
-return new StaticRouteConfig();
+use Tempest\Http\Static\StaticPageConfig;
+
+return new StaticPageConfig();
