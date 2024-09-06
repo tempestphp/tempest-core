@@ -10,11 +10,7 @@ use function Tempest\env;
 
 final readonly class Tempest
 {
-    public static function boot(
-        ?string $root = null,
-        /** @var \Tempest\Core\DiscoveryLocation[] $discoveryLocations */
-        array $discoveryLocations = [],
-    ): Container
+    public static function boot(?string $root = null, ?AppConfig $appConfig = null): Container
     {
         // Fix for classes that don't have a proper PSR-4 namespace,
         // they break discovery with an unrecoverable error,
@@ -34,20 +30,19 @@ final readonly class Tempest
         // Env
         $dotenv = Dotenv::createUnsafeImmutable($root);
         $dotenv->safeLoad();
-//
-//        // AppConfig
-//        $appConfig ??= new AppConfig(
-//            root: $root,
-//            environment: Environment::from(env('ENVIRONMENT', Environment::LOCAL->value)),
-//            discoveryCache: env('DISCOVERY_CACHE', false),
-//        );
-//
-//        $appConfig->exceptionHandlerSetup->setup($appConfig);
+
+        // AppConfig
+        $appConfig ??= new AppConfig(
+            root: $root,
+            environment: Environment::from(env('ENVIRONMENT', Environment::LOCAL->value)),
+            discoveryCache: env('DISCOVERY_CACHE', false),
+        );
+
+        $appConfig->exceptionHandlerSetup->setup($appConfig);
 
         // Kernel
         return (new Kernel(
-            root: $root,
-            discoveryLocations: $discoveryLocations,
-        ))->container;
+            appConfig: $appConfig,
+        ))->init();
     }
 }

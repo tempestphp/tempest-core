@@ -9,36 +9,36 @@ use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
 use Tempest\Container\Container;
+use Tempest\Core\AppConfig;
 use Tempest\Core\DiscoversPath;
 use Tempest\Core\Discovery;
-use Tempest\Core\Kernel;
 use Tempest\Support\Reflection\ClassReflector;
 use Throwable;
 
-final readonly class LoadDiscoveryClasses
+final readonly class DiscoveryBootstrap implements Bootstrap
 {
     public function __construct(
-        private Kernel $kernel,
+        private AppConfig $appConfig,
         private Container $container,
     ) {
     }
 
-    public function __invoke(): void
+    public function boot(): void
     {
-        reset($this->kernel->discoveryClasses);
+        reset($this->appConfig->discoveryClasses);
 
-        while ($discoveryClass = current($this->kernel->discoveryClasses)) {
+        while ($discoveryClass = current($this->appConfig->discoveryClasses)) {
             /** @var Discovery $discovery */
             $discovery = $this->container->get($discoveryClass);
 
-            if ($this->kernel->discoveryCache && $discovery->hasCache()) {
+            if ($this->appConfig->discoveryCache && $discovery->hasCache()) {
                 $discovery->restoreCache($this->container);
-                next($this->kernel->discoveryClasses);
+                next($this->appConfig->discoveryClasses);
 
                 continue;
             }
 
-            foreach ($this->kernel->discoveryLocations as $discoveryLocation) {
+            foreach ($this->appConfig->discoveryLocations as $discoveryLocation) {
                 $directories = new RecursiveDirectoryIterator($discoveryLocation->path, FilesystemIterator::UNIX_PATHS | FilesystemIterator::SKIP_DOTS);
                 $files = new RecursiveIteratorIterator($directories);
 
@@ -96,7 +96,7 @@ final readonly class LoadDiscoveryClasses
                 }
             }
 
-            next($this->kernel->discoveryClasses);
+            next($this->appConfig->discoveryClasses);
 
             $discovery->storeCache();
         }

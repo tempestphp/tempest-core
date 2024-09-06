@@ -4,23 +4,26 @@ declare(strict_types=1);
 
 namespace Tempest\Core\Bootstraps;
 
+use Tempest\Core\AppConfig;
 use Tempest\Core\DiscoveryLocation;
-use Tempest\Core\Kernel;
 use Tempest\Support\PathHelper;
 
-final readonly class LoadDiscoveryLocations
+final readonly class DiscoveryLocationBootstrap implements Bootstrap
 {
     public function __construct(
-        private Kernel $kernel,
-    ) {}
+        private AppConfig $appConfig,
+    ) {
+    }
 
-    public function __invoke(): array
+    public function boot(): void
     {
-        return [
+        $discoveredLocations = [
             ...$this->discoverCorePackages(),
             ...$this->discoverAppNamespaces(),
             ...$this->discoverVendorPackages(),
         ];
+
+        $this->addDiscoveryLocations($discoveredLocations);
     }
 
     /**
@@ -28,7 +31,7 @@ final readonly class LoadDiscoveryLocations
      */
     private function discoverCorePackages(): array
     {
-        $composerPath = PathHelper::make($this->kernel->root, 'vendor/composer');
+        $composerPath = PathHelper::make($this->appConfig->root, 'vendor/composer');
         $installed = $this->loadJsonFile(PathHelper::make($composerPath, 'installed.json'));
         $packages = $installed['packages'] ?? [];
 
@@ -59,13 +62,13 @@ final readonly class LoadDiscoveryLocations
      */
     private function discoverAppNamespaces(): array
     {
-        $composer = $this->loadJsonFile(PathHelper::make($this->kernel->root, 'composer.json'));
+        $composer = $this->loadJsonFile(PathHelper::make($this->appConfig->root, 'composer.json'));
         $namespaceMap = $composer['autoload']['psr-4'] ?? [];
 
         $discoveredLocations = [];
 
         foreach ($namespaceMap as $namespace => $path) {
-            $path = PathHelper::make($this->kernel->root, $path);
+            $path = PathHelper::make($this->appConfig->root, $path);
 
             $discoveredLocations[] = new DiscoveryLocation($namespace, $path);
         }
@@ -78,7 +81,7 @@ final readonly class LoadDiscoveryLocations
      */
     private function discoverVendorPackages(): array
     {
-        $composerPath = PathHelper::make($this->kernel->root, 'vendor/composer');
+        $composerPath = PathHelper::make($this->appConfig->root, 'vendor/composer');
         $installed = $this->loadJsonFile(PathHelper::make($composerPath, 'installed.json'));
         $packages = $installed['packages'] ?? [];
 
@@ -110,10 +113,18 @@ final readonly class LoadDiscoveryLocations
         return $discoveredLocations;
     }
 
+    private function addDiscoveryLocations(array $discoveredLocations): void
+    {
+        $this->appConfig->discoveryLocations = [
+            ...$discoveredLocations,
+            ...$this->appConfig->discoveryLocations,
+        ];
+    }
+
     private function loadJsonFile(string $path): array
     {
         if (! file_exists($path)) {
-            $relativePath = str_replace($this->kernel->root, '.', $path);
+            $relativePath = str_replace($this->appConfig->root, '.', $path);
 
             throw new BootstrapException(sprintf('Could not locate %s, try running "composer install"', $relativePath));
         }
