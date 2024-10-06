@@ -7,12 +7,10 @@ namespace Tempest\Core\Kernel;
 use FilesystemIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
-use ReflectionException;
 use SplFileInfo;
 use Tempest\Container\Container;
 use Tempest\Core\DiscoversPath;
 use Tempest\Core\Discovery;
-use Tempest\Core\DoNotDiscover;
 use Tempest\Core\Kernel;
 use Tempest\Reflection\ClassReflector;
 use Throwable;
@@ -34,15 +32,11 @@ final readonly class LoadDiscoveryClasses
             /** @var Discovery $discovery */
             $discovery = $this->container->get($discoveryClass);
 
-            try {
-                if ($this->kernel->discoveryCache && $discovery->hasCache()) {
-                    $discovery->restoreCache($this->container);
-                    next($this->kernel->discoveryClasses);
+            if ($this->kernel->discoveryCache && $discovery->hasCache()) {
+                $discovery->restoreCache($this->container);
+                next($this->kernel->discoveryClasses);
 
-                    continue;
-                }
-            } catch (ReflectionException) {
-                // Invalid cache
+                continue;
             }
 
             foreach ($this->kernel->discoveryLocations as $discoveryLocation) {
@@ -96,9 +90,7 @@ final readonly class LoadDiscoveryClasses
                     }
 
                     if ($input instanceof ClassReflector) {
-                        if ($this->shouldDiscover($discovery, $input)) {
-                            $discovery->discover($input);
-                        }
+                        $discovery->discover($input);
                     } elseif ($discovery instanceof DiscoversPath) {
                         $discovery->discoverPath($input);
                     }
@@ -111,14 +103,5 @@ final readonly class LoadDiscoveryClasses
                 $discovery->storeCache();
             }
         }
-    }
-
-    private function shouldDiscover(Discovery $discovery, ClassReflector $input): bool
-    {
-        if (is_null($attribute = $input->getAttribute(DoNotDiscover::class))) {
-            return true;
-        }
-
-        return in_array($discovery::class, $attribute->except, strict: true);
     }
 }

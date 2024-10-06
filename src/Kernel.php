@@ -36,12 +36,11 @@ final class Kernel
             ->setDiscoveryCache($discoveryCache)
             ->registerShutdownFunction()
             ->registerKernel()
-            ->loadComposer()
             ->loadDiscoveryLocations()
             ->loadConfig()
-            ->loadExceptionHandler()
-            ->loadDiscovery()
-            ->event(KernelEvent::BOOTED);
+            ->loadDiscovery();
+
+        $this->container->get(EventBus::class)->dispatch(KernelEvent::BOOTED);
     }
 
     public static function boot(string $root, ?Container $container = null): self
@@ -61,13 +60,6 @@ final class Kernel
         $container->singleton(Container::class, fn () => $container);
 
         return $container;
-    }
-
-    private function loadComposer(): self
-    {
-        $this->container->singleton(Composer::class, new Composer($this->root));
-
-        return $this;
     }
 
     private function loadEnv(): self
@@ -131,24 +123,6 @@ final class Kernel
     private function loadConfig(): self
     {
         $this->container->get(LoadConfig::class)();
-
-        return $this;
-    }
-
-    private function loadExceptionHandler(): self
-    {
-        $appConfig = $this->container->get(AppConfig::class);
-
-        $appConfig->exceptionHandlerSetup->setup($appConfig);
-
-        return $this;
-    }
-
-    private function event(object $event): self
-    {
-        if (interface_exists(EventBus::class)) {
-            $this->container->get(EventBus::class)->dispatch($event);
-        }
 
         return $this;
     }
