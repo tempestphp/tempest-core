@@ -6,8 +6,13 @@ namespace Tempest\Core;
 
 final class AppConfig
 {
+    public Environment $environment;
+
+    public string $baseUri;
+
     public function __construct(
-        public Environment $environment = Environment::LOCAL,
+        ?Environment $environment = null,
+        ?string $baseUri = null,
         public ExceptionHandlerSetup $exceptionHandlerSetup = new GenericExceptionHandlerSetup(),
 
         /** @var \Tempest\Core\ExceptionHandler[] */
@@ -15,5 +20,10 @@ final class AppConfig
             // …,
         ],
     ) {
+        $this->environment = $environment
+            ?? Environment::tryFrom(\Tempest\env('ENVIRONMENT', 'local'))
+            ?? Environment::LOCAL;
+
+        $this->baseUri = $baseUri ?? \Tempest\env('BASE_URI') ?? '';
     }
 }
