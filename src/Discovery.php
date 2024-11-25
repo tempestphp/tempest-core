@@ -4,18 +4,15 @@ declare(strict_types=1);
 
 namespace Tempest\Core;
 
-use Tempest\Container\Container;
 use Tempest\Reflection\ClassReflector;
 
 interface Discovery
 {
-    public function discover(ClassReflector $class): void;
+    public function discover(DiscoveryLocation $location, ClassReflector $class): void;
 
-    public function hasCache(): bool;
+    public function getItems(): DiscoveryItems;
 
-    public function storeCache(): void;
+    public function setItems(DiscoveryItems $items): void;
 
-    public function restoreCache(Container $container): void;
-
-    public function destroyCache(): void;
+    public function apply(): void;
 }

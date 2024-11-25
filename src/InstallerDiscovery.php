@@ -6,32 +6,26 @@ namespace Tempest\Core;
 
 use Tempest\Reflection\ClassReflector;
 
-final class DiscoveryDiscovery implements Discovery
+final class InstallerDiscovery implements Discovery
 {
     use IsDiscovery;
 
     public function __construct(
-        private readonly Kernel $kernel,
+        private readonly InstallerConfig $installerConfig,
     ) {
     }
 
     public function discover(DiscoveryLocation $location, ClassReflector $class): void
     {
-        if ($class->getName() === self::class) {
-            return;
+        if ($class->implements(Installer::class)) {
+            $this->discoveryItems->add($location, $class->getName());
         }
-
-        if (! $class->implements(Discovery::class)) {
-            return;
-        }
-
-        $this->discoveryItems->add($location, $class->getName());
     }
 
     public function apply(): void
     {
         foreach ($this->discoveryItems as $className) {
-            $this->kernel->discoveryClasses[] = $className;
+            $this->installerConfig->installers[] = $className;
         }
     }
 }
