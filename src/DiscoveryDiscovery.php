@@ -4,18 +4,19 @@ declare(strict_types=1);
 
 namespace Tempest\Core;
 
+use Tempest\Container\Container;
 use Tempest\Reflection\ClassReflector;
 
-final class DiscoveryDiscovery implements Discovery
+final readonly class DiscoveryDiscovery implements Discovery
 {
-    use IsDiscovery;
+    public const string CACHE_PATH = __DIR__ . '/../../../.cache/tempest/discovery-discovery.cache.php';
 
     public function __construct(
-        private readonly Kernel $kernel,
+        private Kernel $kernel,
     ) {
     }
 
-    public function discover(DiscoveryLocation $location, ClassReflector $class): void
+    public function discover(ClassReflector $class): void
     {
         if ($class->getName() === self::class) {
             return;
@@ -25,13 +26,36 @@ final class DiscoveryDiscovery implements Discovery
             return;
         }
 
-        $this->discoveryItems->add($location, $class->getName());
+        $this->kernel->discoveryClasses[] = $class->getName();
     }
 
-    public function apply(): void
+    public function hasCache(): bool
     {
-        foreach ($this->discoveryItems as $className) {
-            $this->kernel->discoveryClasses[] = $className;
+        return file_exists(self::CACHE_PATH);
+    }
+
+    public function storeCache(): void
+    {
+        $directory = pathinfo(self::CACHE_PATH, PATHINFO_DIRNAME);
+
+        if (! is_dir($directory)) {
+            mkdir($directory, recursive: true);
         }
+
+        file_put_contents(self::CACHE_PATH, serialize($this->kernel->discoveryClasses));
+    }
+
+    public function restoreCache(Container $container): void
+    {
+        $discoveryClasses = unserialize(file_get_contents(self::CACHE_PATH), [
+            'allowed_classes' => true,
+        ]);
+
+        $this->kernel->discoveryClasses = $discoveryClasses;
+    }
+
+    public function destroyCache(): void
+    {
+        @unlink(self::CACHE_PATH);
     }
 }

@@ -5,17 +5,13 @@ declare(strict_types=1);
 namespace Tempest\Core;
 
 use Dotenv\Dotenv;
-use Tempest\Console\Exceptions\ConsoleErrorHandler;
 use Tempest\Container\Container;
 use Tempest\Container\GenericContainer;
-use Tempest\Core\Kernel\FinishDeferredTasks;
 use Tempest\Core\Kernel\LoadConfig;
 use Tempest\Core\Kernel\LoadDiscoveryClasses;
 use Tempest\Core\Kernel\LoadDiscoveryLocations;
+use function Tempest\env;
 use Tempest\EventBus\EventBus;
-use Tempest\Http\Exceptions\HttpProductionErrorHandler;
-use Whoops\Handler\PrettyPageHandler;
-use Whoops\Run;
 
 final class Kernel
 {
@@ -23,49 +19,39 @@ final class Kernel
 
     public bool $discoveryCache;
 
-    public array $discoveryClasses = [];
+    public array $discoveryClasses = [
+        DiscoveryDiscovery::class,
+    ];
 
     public function __construct(
-        public string $root,
-        /** @var \Tempest\Core\DiscoveryLocation[] $discoveryLocations */
+        public readonly string $root,
         public array $discoveryLocations = [],
+        ?bool $discoveryCache = null,
         ?Container $container = null,
     ) {
         $this->container = $container ?? $this->createContainer();
-    }
 
-    public static function boot(
-        string $root,
-        array $discoveryLocations = [],
-        ?Container $container = null,
-    ): self {
-        return (new self(
-            root: $root,
-            discoveryLocations: $discoveryLocations,
-            container: $container,
-        ))
+        $this
             ->loadEnv()
-            ->registerKernelErrorHandler()
+            ->setDiscoveryCache($discoveryCache)
             ->registerShutdownFunction()
             ->registerKernel()
-            ->loadComposer()
             ->loadDiscoveryLocations()
             ->loadConfig()
-            ->loadDiscovery()
-            ->registerErrorHandler()
-            ->event(KernelEvent::BOOTED);
+            ->loadDiscovery();
+
+        $this->container->get(EventBus::class)->dispatch(KernelEvent::BOOTED);
     }
 
-    public function shutdown(int|string $status = ''): never
+    public static function boot(string $root, ?Container $container = null): self
     {
-        $this
-            ->finishDeferredTasks()
-            ->event(KernelEvent::SHUTDOWN);
-
-        exit($status);
+        return new self(
+            root: $root,
+            container: $container,
+        );
     }
 
-    public function createContainer(): Container
+    private function createContainer(): Container
     {
         $container = new GenericContainer();
 
@@ -76,14 +62,7 @@ final class Kernel
         return $container;
     }
 
-    public function loadComposer(): self
-    {
-        $this->container->singleton(Composer::class, new Composer($this->root));
-
-        return $this;
-    }
-
-    public function loadEnv(): self
+    private function loadEnv(): self
     {
         $dotenv = Dotenv::createUnsafeImmutable($this->root);
         $dotenv->safeLoad();
@@ -91,14 +70,25 @@ final class Kernel
         return $this;
     }
 
-    public function registerKernel(): self
+    private function setDiscoveryCache(?bool $discoveryCache): self
+    {
+        if ($discoveryCache !== null) {
+            $this->discoveryCache = $discoveryCache;
+        } else {
+            $this->discoveryCache = env('DISCOVERY_CACHE', false);
+        }
+
+        return $this;
+    }
+
+    private function registerKernel(): self
     {
         $this->container->singleton(self::class, $this);
 
         return $this;
     }
 
-    public function registerShutdownFunction(): self
+    private function registerShutdownFunction(): self
     {
         // Fix for classes that don't have a proper PSR-4 namespace,
         // they break discovery with an unrecoverable error,
@@ -116,81 +106,23 @@ final class Kernel
         return $this;
     }
 
-    public function loadDiscoveryLocations(): self
+    private function loadDiscoveryLocations(): self
     {
         ($this->container->get(LoadDiscoveryLocations::class))();
 
         return $this;
     }
 
-    public function loadDiscovery(): self
+    private function loadDiscovery(): self
     {
         ($this->container->get(LoadDiscoveryClasses::class))();
 
         return $this;
     }
 
-    public function loadConfig(): self
+    private function loadConfig(): self
     {
         $this->container->get(LoadConfig::class)();
-
-        return $this;
-    }
-
-    public function registerErrorHandler(): self
-    {
-        $appConfig = $this->container->get(AppConfig::class);
-
-        if ($appConfig->environment->isTesting()) {
-            return $this;
-        }
-
-        if (PHP_SAPI === 'cli') {
-            $handler = $this->container->get(ConsoleErrorHandler::class);
-            set_exception_handler($handler->handleException(...));
-            set_error_handler($handler->handleError(...)); // @phpstan-ignore-line
-        } elseif ($appConfig->environment->isProduction()) {
-            $handler = $this->container->get(HttpProductionErrorHandler::class);
-            set_exception_handler($handler->handleException(...));
-            set_error_handler($handler->handleError(...)); // @phpstan-ignore-line
-        }
-
-        return $this;
-    }
-
-    public function finishDeferredTasks(): self
-    {
-        ($this->container->get(FinishDeferredTasks::class))();
-
-        return $this;
-    }
-
-    public function event(object $event): self
-    {
-        if (interface_exists(EventBus::class)) {
-            $this->container->get(EventBus::class)->dispatch($event);
-        }
-
-        return $this;
-    }
-
-    public function registerKernelErrorHandler(): self
-    {
-        $environment = Environment::fromEnv();
-
-        if ($environment->isTesting()) {
-            return $this;
-        }
-
-        if (PHP_SAPI !== 'cli' && $environment->isProduction()) {
-            $handler = new HttpProductionErrorHandler();
-            set_exception_handler($handler->handleException(...));
-            set_error_handler($handler->handleError(...)); // @phpstan-ignore-line
-        } elseif (PHP_SAPI !== 'cli') {
-            $whoops = new Run();
-            $whoops->pushHandler(new PrettyPageHandler());
-            $whoops->register();
-        }
 
         return $this;
     }

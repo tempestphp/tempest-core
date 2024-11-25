@@ -4,18 +4,16 @@ declare(strict_types=1);
 
 namespace Tempest\Core\Kernel;
 
-use Tempest\Core\Composer;
 use Tempest\Core\DiscoveryException;
 use Tempest\Core\DiscoveryLocation;
 use Tempest\Core\Kernel;
-use function Tempest\path;
+use Tempest\Support\PathHelper;
 
 /** @internal */
 final readonly class LoadDiscoveryLocations
 {
     public function __construct(
         private Kernel $kernel,
-        private Composer $composer,
     ) {
     }
 
@@ -25,8 +23,8 @@ final readonly class LoadDiscoveryLocations
             [
                 ...$this->kernel->discoveryLocations,
                 ...$this->discoverCorePackages(),
-                ...$this->discoverVendorPackages(),
                 ...$this->discoverAppNamespaces(),
+                ...$this->discoverVendorPackages(),
             ];
     }
 
@@ -35,8 +33,8 @@ final readonly class LoadDiscoveryLocations
      */
     private function discoverCorePackages(): array
     {
-        $composerPath = path($this->kernel->root, 'vendor/composer');
-        $installed = $this->loadJsonFile(path($composerPath, 'installed.json')->toString());
+        $composerPath = PathHelper::make($this->kernel->root, 'vendor/composer');
+        $installed = $this->loadJsonFile(PathHelper::make($composerPath, 'installed.json'));
         $packages = $installed['packages'] ?? [];
 
         $discoveredLocations = [];
@@ -49,12 +47,12 @@ final readonly class LoadDiscoveryLocations
                 continue;
             }
 
-            $packagePath = path($composerPath, $package['install-path'] ?? '');
+            $packagePath = PathHelper::make($composerPath, $package['install-path'] ?? '');
 
             foreach ($package['autoload']['psr-4'] as $namespace => $namespacePath) {
-                $namespacePath = path($packagePath, $namespacePath);
+                $namespacePath = PathHelper::make($packagePath, $namespacePath);
 
-                $discoveredLocations[] = new DiscoveryLocation($namespace, $namespacePath->toString());
+                $discoveredLocations[] = new DiscoveryLocation($namespace, $namespacePath);
             }
         }
 
@@ -66,12 +64,15 @@ final readonly class LoadDiscoveryLocations
      */
     private function discoverAppNamespaces(): array
     {
+        $composer = $this->loadJsonFile(PathHelper::make($this->kernel->root, 'composer.json'));
+        $namespaceMap = $composer['autoload']['psr-4'] ?? [];
+
         $discoveredLocations = [];
 
-        foreach ($this->composer->namespaces as $namespace) {
-            $path = path($this->kernel->root, $namespace->path);
+        foreach ($namespaceMap as $namespace => $path) {
+            $path = PathHelper::make($this->kernel->root, $path);
 
-            $discoveredLocations[] = new DiscoveryLocation($namespace->namespace, $path->toString());
+            $discoveredLocations[] = new DiscoveryLocation($namespace, $path);
         }
 
         return $discoveredLocations;
@@ -82,8 +83,8 @@ final readonly class LoadDiscoveryLocations
      */
     private function discoverVendorPackages(): array
     {
-        $composerPath = path($this->kernel->root, 'vendor/composer');
-        $installed = $this->loadJsonFile(path($composerPath, 'installed.json')->toString());
+        $composerPath = PathHelper::make($this->kernel->root, 'vendor/composer');
+        $installed = $this->loadJsonFile(PathHelper::make($composerPath, 'installed.json'));
         $packages = $installed['packages'] ?? [];
 
         $discoveredLocations = [];
@@ -96,7 +97,7 @@ final readonly class LoadDiscoveryLocations
                 continue;
             }
 
-            $packagePath = path($composerPath, $package['install-path'] ?? '');
+            $packagePath = PathHelper::make($composerPath, $package['install-path'] ?? '');
             $requiresTempest = isset($package['require']['tempest/framework']) || isset($package['require']['tempest/core']);
             $hasPsr4Namespaces = isset($package['autoload']['psr-4']);
 
@@ -105,9 +106,9 @@ final readonly class LoadDiscoveryLocations
             }
 
             foreach ($package['autoload']['psr-4'] as $namespace => $namespacePath) {
-                $path = path($packagePath, $namespacePath);
+                $path = PathHelper::make($packagePath, $namespacePath);
 
-                $discoveredLocations[] = new DiscoveryLocation($namespace, $path->toString());
+                $discoveredLocations[] = new DiscoveryLocation($namespace, $path);
             }
         }
 
