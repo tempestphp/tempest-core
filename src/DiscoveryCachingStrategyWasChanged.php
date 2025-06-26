@@ -6,7 +6,7 @@ namespace Tempest\Core;
 
 use Exception;
 
-final class DiscoveryCachingStrategyChangedException extends Exception
+final class DiscoveryCachingStrategyWasChanged extends Exception
 {
     public function __construct(string $previous, mixed $current)
     {
