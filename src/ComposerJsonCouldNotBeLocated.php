@@ -6,6 +6,6 @@ namespace Tempest\Core;
 
 use Exception;
 
-final class KernelException extends Exception
+final class ComposerJsonCouldNotBeLocated extends Exception
 {
 }

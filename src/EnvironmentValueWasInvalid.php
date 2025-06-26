@@ -8,7 +8,7 @@ use Exception;
 
 use function Tempest\Support\arr;
 
-final class InvalidEnvironment extends Exception
+final class EnvironmentValueWasInvalid extends Exception
 {
     public function __construct(string $value)
     {
