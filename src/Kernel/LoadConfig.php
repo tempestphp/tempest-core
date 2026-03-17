@@ -27,7 +27,7 @@ final readonly class LoadConfig
 
     public function __invoke(): void
     {
-        $configPaths = $this->cache->resolve('config_cache', fn () => $this->find());
+        $configPaths = $this->cache->resolve('config_cache', $this->find(...));
 
         foreach ($configPaths as $path) {
             $configFile = require $path;
@@ -120,7 +120,11 @@ final readonly class LoadConfig
 
             foreach ($subPaths as $subPath) {
                 // `.` and `..` are skipped
-                if ($subPath === '.' || $subPath === '..') {
+                if ($subPath === '.') {
+                    continue;
+                }
+
+                if ($subPath === '..') {
                     continue;
                 }
 

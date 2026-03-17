@@ -10,17 +10,11 @@ interface Kernel
 {
     public const string VERSION = '3.4.1';
 
-    public string $root {
-        get;
-    }
+    public string $root { get; }
 
-    public string $internalStorage {
-        get;
-    }
+    public string $internalStorage { get; }
 
-    public Container $container {
-        get;
-    }
+    public Container $container { get; }
 
     public static function boot(
         string $root,

@@ -9,7 +9,7 @@ use Tempest\Console\HasConsole;
 use Tempest\Discovery\ClearDiscoveryCache;
 use Tempest\Discovery\DiscoveryCache;
 
-if (class_exists(\Tempest\Console\ConsoleCommand::class)) {
+if (class_exists(ConsoleCommand::class)) {
     final readonly class DiscoveryClearCommand
     {
         use HasConsole;

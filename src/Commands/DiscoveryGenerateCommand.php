@@ -14,7 +14,7 @@ use Tempest\Discovery\DiscoveryCacheStrategy;
 use Tempest\Discovery\DiscoveryConfig;
 use Tempest\Discovery\GenerateDiscoveryCache;
 
-if (class_exists(\Tempest\Console\ConsoleCommand::class)) {
+if (class_exists(ConsoleCommand::class)) {
     final readonly class DiscoveryGenerateCommand
     {
         use HasConsole;
