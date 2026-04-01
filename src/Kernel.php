@@ -8,7 +8,7 @@ use Tempest\Container\Container;
 
 interface Kernel
 {
-    public const string VERSION = '3.8.0';
+    public const string VERSION = '3.9.0';
 
     public string $root { get; }
 
