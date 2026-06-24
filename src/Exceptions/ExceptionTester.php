@@ -78,7 +78,7 @@ final class ExceptionTester
     public function assertNothingProcessed(): self
     {
         Assert::assertEmpty(
-            actual: $this->processor?->processed,
+            actual: $this->processor->processed,
             message: sprintf('There are unexpected processed exceptions: [%s]', implode(', ', $this->processor->processed)),
         );
 
@@ -87,7 +87,7 @@ final class ExceptionTester
 
     private function findRecordedProcessings(string|object $exception): array
     {
-        return array_filter($this->processor?->processed, function (string|object $reported) use ($exception) {
+        return array_filter($this->processor->processed, function (string|object $reported) use ($exception) {
             if ($reported === $exception) {
                 return true;
             }

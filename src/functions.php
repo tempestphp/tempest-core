@@ -31,7 +31,7 @@ function root_path(Stringable|string ...$parts): string
  */
 function src_path(Stringable|string ...$parts): string
 {
-    return root_path(Container\get(Composer::class)->mainNamespace?->path, ...$parts);
+    return root_path(Container\get(Composer::class)->mainNamespace->path, ...$parts);
 }
 
 /**
